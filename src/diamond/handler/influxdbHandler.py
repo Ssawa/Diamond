@@ -9,6 +9,8 @@ v1.1 : force influxdb driver with SSL
 v1.2 : added a timer to delay influxdb writing in case of failure
        this whill avoid the 100% cpu loop when influx in not responding
        Sebastien Prune THOMAS - prune@lecentre.net
+v1.3 : Add support for influxdb 9.0 and allow the ability to timeout requests
+
 
 #### Dependencies
  * [influxdb](https://github.com/influxdb/influxdb-python)
@@ -25,6 +27,7 @@ username = root
 password = root
 database = graphite
 time_precision = s
+timeout = 5
 influxdb_version = 0.9
 ```
 """
@@ -70,6 +73,7 @@ class InfluxdbHandler(Handler):
         self.metric_max_cache = int(self.config['cache_size'])
         self.batch_count = 0
         self.time_precision = self.config['time_precision']
+        self.timeout = self.config['timeout']
         self.influxdb_version = self.config['influxdb_version']
         self.using_0_8 = False
 
@@ -120,6 +124,8 @@ class InfluxdbHandler(Handler):
             'database': 'Database name',
             'time_precision': 'time precision in second(s), milisecond(ms) or '
                               'microsecond (u)',
+            'timeout': 'Number of seconds to wait before timing out a hanging'
+                       ' request to influxdb',
             'influxdb_version': 'InfluxDB API version, default 0.9'
         })
 
@@ -141,6 +147,7 @@ class InfluxdbHandler(Handler):
             'batch_size': 1,
             'cache_size': 20000,
             'time_precision': 's',
+            'timeout': 5,
             'influxdb_version': '0.9',
         })
 
@@ -155,13 +162,12 @@ class InfluxdbHandler(Handler):
     def process(self, metric):
         if self.batch_count <= self.metric_max_cache:
             # Add the data to the batch
-            #self.batch.setdefault(metric.path, []).append([metric.timestamp,
-            #                                               metric.value])
             self.batch.setdefault(metric.path, []).append(metric)
             self.batch_count += 1
         # If there are sufficient metrics, then pickle and send
         if self.batch_count >= self.batch_size and (
-                time.time() - self.batch_timestamp) > 2 ** self.time_multiplier:
+                time.time() - self.batch_timestamp) > (
+                2 ** self.time_multiplier):
             # Log
             self.log.debug(
                 "InfluxdbHandler: Sending batch sizeof : %d/%d after %fs",
@@ -256,7 +262,8 @@ class InfluxdbHandler(Handler):
             # Open Connection
             self.influx = self.client(self.hostname, self.port,
                                       self.username, self.password,
-                                      self.database, self.ssl)
+                                      self.database, self.ssl,
+                                      timeout=self.timeout)
             # Log
             self.log.debug("InfluxdbHandler: Established connection to "
                            "%s:%d/%s.",
