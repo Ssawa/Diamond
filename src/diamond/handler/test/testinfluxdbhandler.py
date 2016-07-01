@@ -40,7 +40,7 @@ class TestInfluxdbHandler(unittest.TestCase):
         patch_request.stop()
 
         expected_result = \
-            'servers.com.example.www.cpu.total.idle value=0i 1234567\n'
+            'servers.com.example.www.cpu.total.idle value=0.0 1234567\n'
 
         self.assertEqual(request_mock.call_count, 1)
         self.assertEqual(request_mock.call_args[1]['data'], expected_result)
@@ -64,9 +64,9 @@ class TestInfluxdbHandler(unittest.TestCase):
         patch_request.stop()
 
         expected_result = \
-            'servers.com.example.www.cpu.total.idle value=0i 1234567\n' + \
-            'servers.com.example.www.cpu.total.idle value=1i 1234568\n' + \
-            'servers.com.example.www.cpu.total.idle value=2i 1234569\n'
+            'servers.com.example.www.cpu.total.idle value=0.0 1234567\n' + \
+            'servers.com.example.www.cpu.total.idle value=1.0 1234568\n' + \
+            'servers.com.example.www.cpu.total.idle value=2.0 1234569\n'
 
         self.assertEqual(request_mock.call_count, 1)
         self.assertEqual(request_mock.call_args[1]['data'], expected_result)
@@ -91,7 +91,7 @@ class TestInfluxdbHandler(unittest.TestCase):
 
         expected_result = [dict(columns=['time', 'value'],
                                 name='servers.com.example.www.cpu.total.idle',
-                                points=[[1234567, 0]])]
+                                points=[[1234567, 0.0]])]
 
         self.assertEqual(request_mock.call_count, 1)
         self.assertEqual(request_mock.call_args[1]['data'], expected_result)
@@ -117,8 +117,8 @@ class TestInfluxdbHandler(unittest.TestCase):
 
         expected_result = [dict(columns=['time', 'value'],
                                 name='servers.com.example.www.cpu.total.idle',
-                                points=[[1234567, 0], [1234568, 1],
-                                        [1234569, 2]])]
+                                points=[[1234567, 0,0], [1234568, 1.0],
+                                        [1234569, 2.0]])]
 
         self.assertEqual(request_mock.call_count, 1)
         self.assertEqual(request_mock.call_args[1]['data'], expected_result)

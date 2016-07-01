@@ -192,10 +192,18 @@ class InfluxdbHandler(Handler):
         else:
             for path in self.batch:
                 for point in self.batch[path]:
+                    # Cast to float to ensure it's written as a float in
+                    # InfluxDB. This prevents future errors where the data type
+                    # of a field in InfluxDB is 'int', but we try to write a
+                    # float to that field.
+                    value = point[1]
+                    if isinstance(value, integer_types):
+                        value = float(value)
+
                     metrics.append({
                         "measurement": path,
                         "time": point[0],
-                        "fields": {"value": point[1]}})
+                        "fields": {"value": value}})
 
         return metrics
 
