@@ -28,7 +28,7 @@ class TestInfluxdbHandler(unittest.TestCase):
         config['batch_size'] = 1
 
         metric = Metric('servers.com.example.www.cpu.total.idle',
-                        0, timestamp=1234567, host='will-be-ignored')
+                        0, timestamp=1234567, host='com.example.www')
 
         handler = InfluxdbHandler(config)
         handler.time_multiplier = float('-inf')
@@ -40,7 +40,7 @@ class TestInfluxdbHandler(unittest.TestCase):
         patch_request.stop()
 
         expected_result = \
-            'servers.com.example.www.cpu.total.idle value=0.0 1234567\n'
+            'cpu,host=com.example.www total.idle=0.0 1234567\n'
 
         self.assertEqual(request_mock.call_count, 1)
         self.assertEqual(request_mock.call_args[1]['data'], expected_result)
@@ -59,14 +59,14 @@ class TestInfluxdbHandler(unittest.TestCase):
         patch_request.start()
         for i in range(num):
             metric = Metric('servers.com.example.www.cpu.total.idle',
-                            i, timestamp=1234567 + i, host='will-be-ignored')
+                            i, timestamp=1234567 + i, host='com.example.www')
             handler.process(metric)
         patch_request.stop()
 
         expected_result = \
-            'servers.com.example.www.cpu.total.idle value=0.0 1234567\n' + \
-            'servers.com.example.www.cpu.total.idle value=1.0 1234568\n' + \
-            'servers.com.example.www.cpu.total.idle value=2.0 1234569\n'
+            'cpu,host=com.example.www total.idle=0.0 1234567\n' + \
+            'cpu,host=com.example.www total.idle=1.0 1234568\n' + \
+            'cpu,host=com.example.www total.idle=2.0 1234569\n'
 
         self.assertEqual(request_mock.call_count, 1)
         self.assertEqual(request_mock.call_args[1]['data'], expected_result)
@@ -117,7 +117,7 @@ class TestInfluxdbHandler(unittest.TestCase):
 
         expected_result = [dict(columns=['time', 'value'],
                                 name='servers.com.example.www.cpu.total.idle',
-                                points=[[1234567, 0,0], [1234568, 1.0],
+                                points=[[1234567, 0.0], [1234568, 1.0],
                                         [1234569, 2.0]])]
 
         self.assertEqual(request_mock.call_count, 1)

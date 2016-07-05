@@ -155,8 +155,9 @@ class InfluxdbHandler(Handler):
     def process(self, metric):
         if self.batch_count <= self.metric_max_cache:
             # Add the data to the batch
-            self.batch.setdefault(metric.path, []).append([metric.timestamp,
-                                                           metric.value])
+            #self.batch.setdefault(metric.path, []).append([metric.timestamp,
+            #                                               metric.value])
+            self.batch.setdefault(metric.path, []).append(metric)
             self.batch_count += 1
         # If there are sufficient metrics, then pickle and send
         if self.batch_count >= self.batch_size and (
@@ -186,24 +187,27 @@ class InfluxdbHandler(Handler):
         if self.using_0_8:
             for path in self.batch:
                 metrics.append({
-                    "points": self.batch[path],
+                    "points": [[metric.timestamp, metric.value] for metric in
+                               self.batch[path]],
                     "name": path,
                     "columns": ["time", "value"]})
         else:
             for path in self.batch:
-                for point in self.batch[path]:
+                for metric in self.batch[path]:
                     # Cast to float to ensure it's written as a float in
                     # InfluxDB. This prevents future errors where the data type
                     # of a field in InfluxDB is 'int', but we try to write a
                     # float to that field.
-                    value = point[1]
+                    value = metric.value
                     if isinstance(value, integer_types):
                         value = float(value)
 
                     metrics.append({
-                        "measurement": path,
-                        "time": point[0],
-                        "fields": {"value": value}})
+                        "measurement": metric.getCollectorPath(),
+                        "time": metric.timestamp,
+                        "fields": {metric.getMetricPath(): value},
+                        "tags": {"host": metric.host}
+                    }),
 
         return metrics
 
